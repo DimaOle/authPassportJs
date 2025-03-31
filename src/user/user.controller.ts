@@ -12,12 +12,12 @@ export class UserController {
 
   @Get(':idOrEmail')
   findOneUser(@Param('idOrEmail') idOrEmail: string) {
-    return this.findOneUser(idOrEmail);
+    return this.userService.findOne(idOrEmail);
   };
 
   @Delete(':id')
   deleteUser(@Param('id', ParseUUIDPipe) id: string) {
-    return this.deleteUser(id);
+    return this.userService.delete(id);
   };
 
 }
