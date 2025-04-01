@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Token } from '@prisma/client';
@@ -18,10 +19,14 @@ export class AuthService {
     ) {}
     
     async register(dto: RegisterDto) {
-        return this.userService.save(dto).catch(err => {
+        const user = this.userService.save(dto).catch(err => {
             this.logger.error(err)
             return null
         })
+        if (!user) {
+             throw new BadRequestException(`Unable to register user with data ${JSON.stringify(dto)}`)
+        }
+        return user
     }
 
     async login(dto: LoginDto) {
@@ -41,7 +46,11 @@ export class AuthService {
         })
 
         const refreshToken = await this.getRefreshToken(user.id)
-        
+
+        if (!refreshToken) {
+            throw new BadRequestException(`I can't log in with the data that was transferred ${JSON.stringify(dto)}`)
+        };
+
         return {accessToken, refreshToken}
     }
 
