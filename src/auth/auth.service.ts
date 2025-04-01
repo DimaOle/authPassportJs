@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Token } from '@prisma/client';
@@ -8,6 +9,7 @@ import { compareSync } from 'bcrypt';
 import { add } from 'date-fns';
 import { v4 } from 'uuid';
 import { LoginDto, RegisterDto } from './dto';
+import { Tokens } from './interfaces';
 
 @Injectable()
 export class AuthService {
@@ -19,19 +21,26 @@ export class AuthService {
     ) {}
     
     async register(dto: RegisterDto) {
-        const user = this.userService.save(dto).catch(err => {
+        const user = await this.userService.findOne(dto.email);
+
+        if (user) {
+            throw new ConflictException(`A user with this email has already been created`)
+        }
+
+        const createUser = await this.userService.save(dto).catch(err => {
             this.logger.error(err)
             return null
         })
-        if (!user) {
+
+        if (!createUser) {
              throw new BadRequestException(`Unable to register user with data ${JSON.stringify(dto)}`)
         }
-        return user
+        return createUser
     }
 
-    async login(dto: LoginDto) {
+    async login(dto: LoginDto): Promise<Tokens> {
         const user = await this.userService.findOne(dto.email).catch(err => {
-            this.logger.error(err)
+            this.logger.error(err);
             return null
         })
 
@@ -39,7 +48,7 @@ export class AuthService {
             throw new UnauthorizedException("Incorrectly password or email")
         }
 
-        const accessToken = this.jwtService.sign({
+        const accessToken = 'Bearer ' + this.jwtService.sign({
             id: user.id,
             email: user.email,
             roles: user.roles
