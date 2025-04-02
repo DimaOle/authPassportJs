@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { ConflictException } from '@nestjs/common';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -6,10 +6,14 @@ import { Token } from '@prisma/client';
 import { PrismaService } from '@prisma/prisma.service';
 import { UserService } from '@user/user.service';
 import { compareSync } from 'bcrypt';
+import { Response } from 'express';
 import { add } from 'date-fns';
 import { v4 } from 'uuid';
 import { LoginDto, RegisterDto } from './dto';
 import { Tokens } from './interfaces';
+import { ConfigService } from '@nestjs/config';
+
+const REFRESH_TOKEN = 'refreshtoken'
 
 @Injectable()
 export class AuthService {
@@ -17,7 +21,8 @@ export class AuthService {
     constructor(
         private readonly userService: UserService,
         private readonly jwtService: JwtService,
-        private readonly prismaServise: PrismaService
+        private readonly prismaServise: PrismaService,
+        private readonly configService: ConfigService
     ) {}
     
     async register(dto: RegisterDto) {
@@ -59,7 +64,7 @@ export class AuthService {
         if (!refreshToken) {
             throw new BadRequestException(`I can't log in with the data that was transferred ${JSON.stringify(dto)}`)
         };
-
+        console.log({accessToken, refreshToken})
         return {accessToken, refreshToken}
     }
 
@@ -72,4 +77,21 @@ export class AuthService {
             }
         })
     }
+      
+    setRefreshTokenToCookies(tokens: Tokens, res: Response) {
+    if (!tokens) {
+      throw new UnauthorizedException();
+    }
+
+    res.cookie(REFRESH_TOKEN, tokens.refreshToken.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      expires: new Date(tokens.refreshToken.exp),
+      secure: this.configService.get('NODE_ENV', 'develompment') === 'production',
+      path: '/'
+    })
+    
+    res.status(HttpStatus.CREATED).json(tokens)
+  }
+    
 }
