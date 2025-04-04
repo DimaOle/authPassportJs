@@ -12,7 +12,7 @@ import { v4 } from 'uuid';
 import { LoginDto, RegisterDto } from './dto';
 import { Tokens } from './interfaces';
 import { ConfigService } from '@nestjs/config';
-import { REFRESH_TOKEN } from '@common/common/decarators';
+import { REFRESH_TOKEN, UserAgent } from '@common/common/decarators';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +42,7 @@ export class AuthService {
         return createUser
     }
     
-    async refreshTokens(refreshToken: string): Promise<Tokens> {
+    async refreshTokens(refreshToken: string, agent: string): Promise<Tokens> {
         const token = await this.prismaServise.token.findUnique({ where: { token: refreshToken } })
         if (!token) {
             throw new UnauthorizedException()
@@ -54,9 +54,9 @@ export class AuthService {
         }
         const users = await this.userService.findOne(token.userId);
 
-        return this.generateTokens(users);
+        return this.generateTokens(users, agent);
     }
-    async login(dto: LoginDto): Promise<Tokens> {
+    async login(dto: LoginDto, agent: string): Promise<Tokens> {
         const user = await this.userService.findOne(dto.email).catch(err => {
             this.logger.error(err);
             return null
@@ -65,18 +65,18 @@ export class AuthService {
         if (!user || !compareSync(dto.password, user.password)) {
             throw new UnauthorizedException("Incorrectly password or email")
         }
-        return this.generateTokens(user);
+        return this.generateTokens(user, agent);
 
     }
 
-    private async generateTokens(user: User): Promise<Tokens> {
+    private async generateTokens(user: User, agent: string): Promise<Tokens> {
         const accessToken = 'Bearer ' + this.jwtService.sign({
             id: user.id,
             email: user.email,
             roles: user.roles
         })
 
-        const refreshToken = await this.getRefreshToken(user.id)
+        const refreshToken = await this.getRefreshToken(user.id, agent)
 
         if (!refreshToken) {
             throw new BadRequestException(`I can't log in with the data that was transferred`)
@@ -84,12 +84,27 @@ export class AuthService {
         return {accessToken, refreshToken}
     }
 
-    private async getRefreshToken(userId: string): Promise<Token> {
-        return this.prismaServise.token.create({
-            data: {
+    private async getRefreshToken(userId: string, agent: string): Promise<Token> {
+        const token = await this.prismaServise.token.findFirst({
+            where: {
+                userId,
+                userAgent: agent
+            }
+        })
+
+        const userToken = token?.token || ""
+        
+        return this.prismaServise.token.upsert({
+            where: { token: userToken},
+            update: {
+                token: v4(),
+                exp: add(new Date(), { months: 1 }),
+            },
+            create: {
                 token: v4(),
                 exp: add(new Date(), { months: 1 }),
                 userId,
+                userAgent: agent
             }
         })
     }

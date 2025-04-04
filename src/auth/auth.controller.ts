@@ -19,17 +19,17 @@ export class AuthController {
   
   @Post('login')
   async login(@Body() dto: LoginDto, @Res() res: Response, @UserAgent() agent: string) { 
-    const Tokens = await this.authService.login(dto);
+    const Tokens = await this.authService.login(dto, agent);
     this.authService.setRefreshTokenToCookies(Tokens, res)
   }
   
   @Get('refresh-tokens')
-  async refreshTokin(@Cookie(REFRESH_TOKEN) refreshToken: string, @Res() res: Response) {
+  async refreshTokin(@Cookie(REFRESH_TOKEN) refreshToken: string, @Res() res: Response, @UserAgent() agent: string) {
     if (!refreshToken) {
       throw new UnauthorizedException()
     }
 
-    const tokens = await this.authService.refreshTokens(refreshToken);
+    const tokens = await this.authService.refreshTokens(refreshToken, agent);
 
     if (!tokens) {
       throw new UnauthorizedException();
