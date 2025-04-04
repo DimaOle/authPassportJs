@@ -28,7 +28,7 @@ export class UserService {
             where: {
                 OR: [{ id: idOrEmail }, { email: idOrEmail }],
             },
-        }) || {};
+        });
      }
 
     async delete(id: string) { 

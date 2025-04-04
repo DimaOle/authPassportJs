@@ -2,7 +2,7 @@ import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { ConflictException } from '@nestjs/common';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Token } from '@prisma/client';
+import { Token, User } from '@prisma/client';
 import { PrismaService } from '@prisma/prisma.service';
 import { UserService } from '@user/user.service';
 import { compareSync } from 'bcrypt';
@@ -12,8 +12,7 @@ import { v4 } from 'uuid';
 import { LoginDto, RegisterDto } from './dto';
 import { Tokens } from './interfaces';
 import { ConfigService } from '@nestjs/config';
-
-const REFRESH_TOKEN = 'refreshtoken'
+import { REFRESH_TOKEN } from '@common/common/decarators';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +41,21 @@ export class AuthService {
         }
         return createUser
     }
+    
+    async refreshTokens(refreshToken: string): Promise<Tokens> {
+        const token = await this.prismaServise.token.findUnique({ where: { token: refreshToken } })
+        if (!token) {
+            throw new UnauthorizedException()
+        }
+        await this.prismaServise.token.delete({ where: { token: refreshToken } });
 
+        if (new Date(token.exp) < new Date()) {
+            throw new UnauthorizedException()
+        }
+        const users = await this.userService.findOne(token.userId);
+
+        return this.generateTokens(users);
+    }
     async login(dto: LoginDto): Promise<Tokens> {
         const user = await this.userService.findOne(dto.email).catch(err => {
             this.logger.error(err);
@@ -52,7 +65,11 @@ export class AuthService {
         if (!user || !compareSync(dto.password, user.password)) {
             throw new UnauthorizedException("Incorrectly password or email")
         }
+        return this.generateTokens(user);
 
+    }
+
+    private async generateTokens(user: User): Promise<Tokens> {
         const accessToken = 'Bearer ' + this.jwtService.sign({
             id: user.id,
             email: user.email,
@@ -62,9 +79,8 @@ export class AuthService {
         const refreshToken = await this.getRefreshToken(user.id)
 
         if (!refreshToken) {
-            throw new BadRequestException(`I can't log in with the data that was transferred ${JSON.stringify(dto)}`)
+            throw new BadRequestException(`I can't log in with the data that was transferred`)
         };
-        console.log({accessToken, refreshToken})
         return {accessToken, refreshToken}
     }
 
@@ -91,7 +107,7 @@ export class AuthService {
       path: '/'
     })
     
-    res.status(HttpStatus.CREATED).json(tokens)
+    res.status(HttpStatus.CREATED).json({accessToken: tokens.accessToken})
   }
     
 }

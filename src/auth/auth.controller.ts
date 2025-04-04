@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { Cookie, REFRESH_TOKEN, UserAgent } from '@common/common/decarators';
+import { Body, Controller, Get, Post, Res, UnauthorizedException } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
@@ -17,13 +18,25 @@ export class AuthController {
   }
   
   @Post('login')
-  async login(@Body() dto: LoginDto, @Res() res: Response) { 
+  async login(@Body() dto: LoginDto, @Res() res: Response, @UserAgent() agent: string) { 
     const Tokens = await this.authService.login(dto);
     this.authService.setRefreshTokenToCookies(Tokens, res)
   }
   
-  @Get('refresh')
-  refreshTokin() { }
+  @Get('refresh-tokens')
+  async refreshTokin(@Cookie(REFRESH_TOKEN) refreshToken: string, @Res() res: Response) {
+    if (!refreshToken) {
+      throw new UnauthorizedException()
+    }
+
+    const tokens = await this.authService.refreshTokens(refreshToken);
+
+    if (!tokens) {
+      throw new UnauthorizedException();
+    }
+    this.authService.setRefreshTokenToCookies(tokens, res)
+
+   }
   
 
 }
