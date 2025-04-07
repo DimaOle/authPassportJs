@@ -16,86 +16,87 @@ import { REFRESH_TOKEN, UserAgent } from '@common/common/decarators';
 
 @Injectable()
 export class AuthService {
-    private readonly logger = new Logger(AuthService.name)
+    private readonly logger = new Logger(AuthService.name);
     constructor(
         private readonly userService: UserService,
         private readonly jwtService: JwtService,
         private readonly prismaServise: PrismaService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
     ) {}
-    
+
     async register(dto: RegisterDto) {
         const user = await this.userService.findOne(dto.email);
 
         if (user) {
-            throw new ConflictException(`A user with this email has already been created`)
+            throw new ConflictException(`A user with this email has already been created`);
         }
 
-        const createUser = await this.userService.save(dto).catch(err => {
-            this.logger.error(err)
-            return null
-        })
+        const createUser = await this.userService.save(dto).catch((err) => {
+            this.logger.error(err);
+            return null;
+        });
 
         if (!createUser) {
-             throw new BadRequestException(`Unable to register user with data ${JSON.stringify(dto)}`)
+            throw new BadRequestException(`Unable to register user with data ${JSON.stringify(dto)}`);
         }
-        return createUser
+        return createUser;
     }
-    
+
     async refreshTokens(refreshToken: string, agent: string): Promise<Tokens> {
-        const token = await this.prismaServise.token.findUnique({ where: { token: refreshToken } })
+        const token = await this.prismaServise.token.findUnique({ where: { token: refreshToken } });
         if (!token) {
-            throw new UnauthorizedException()
+            throw new UnauthorizedException();
         }
         await this.prismaServise.token.delete({ where: { token: refreshToken } });
 
         if (new Date(token.exp) < new Date()) {
-            throw new UnauthorizedException()
+            throw new UnauthorizedException();
         }
         const users = await this.userService.findOne(token.userId);
 
         return this.generateTokens(users, agent);
     }
     async login(dto: LoginDto, agent: string): Promise<Tokens> {
-        const user = await this.userService.findOne(dto.email).catch(err => {
+        const user = await this.userService.findOne(dto.email).catch((err) => {
             this.logger.error(err);
-            return null
-        })
+            return null;
+        });
 
         if (!user || !compareSync(dto.password, user.password)) {
-            throw new UnauthorizedException("Incorrectly password or email")
+            throw new UnauthorizedException('Incorrectly password or email');
         }
         return this.generateTokens(user, agent);
-
     }
 
     private async generateTokens(user: User, agent: string): Promise<Tokens> {
-        const accessToken = 'Bearer ' + this.jwtService.sign({
-            id: user.id,
-            email: user.email,
-            roles: user.roles
-        })
+        const accessToken =
+            'Bearer ' +
+            this.jwtService.sign({
+                id: user.id,
+                email: user.email,
+                roles: user.roles,
+            });
 
-        const refreshToken = await this.getRefreshToken(user.id, agent)
+        const refreshToken = await this.getRefreshToken(user.id, agent);
 
         if (!refreshToken) {
-            throw new BadRequestException(`I can't log in with the data that was transferred`)
-        };
-        return {accessToken, refreshToken}
+            throw new BadRequestException(`I can't log in with the data that was transferred`);
+        }
+        return { accessToken, refreshToken };
     }
 
     private async getRefreshToken(userId: string, agent: string): Promise<Token> {
         const token = await this.prismaServise.token.findFirst({
             where: {
                 userId,
-                userAgent: agent
-            }
-        })
+                userAgent: agent,
+            },
+        });
 
-        const userToken = token?.token || ""
-        
+        const userToken = token?.token || '';
+
         return this.prismaServise.token.upsert({
-            where: { token: userToken},
+            where: { token: userToken },
             update: {
                 token: v4(),
                 exp: add(new Date(), { months: 1 }),
@@ -104,25 +105,24 @@ export class AuthService {
                 token: v4(),
                 exp: add(new Date(), { months: 1 }),
                 userId,
-                userAgent: agent
-            }
-        })
-    }
-      
-    setRefreshTokenToCookies(tokens: Tokens, res: Response) {
-    if (!tokens) {
-      throw new UnauthorizedException();
+                userAgent: agent,
+            },
+        });
     }
 
-    res.cookie(REFRESH_TOKEN, tokens.refreshToken.token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      expires: new Date(tokens.refreshToken.exp),
-      secure: this.configService.get('NODE_ENV', 'develompment') === 'production',
-      path: '/'
-    })
-    
-    res.status(HttpStatus.CREATED).json({accessToken: tokens.accessToken})
-  }
-    
+    setRefreshTokenToCookies(tokens: Tokens, res: Response) {
+        if (!tokens) {
+            throw new UnauthorizedException();
+        }
+
+        res.cookie(REFRESH_TOKEN, tokens.refreshToken.token, {
+            httpOnly: true,
+            sameSite: 'lax',
+            expires: new Date(tokens.refreshToken.exp),
+            secure: this.configService.get('NODE_ENV', 'develompment') === 'production',
+            path: '/',
+        });
+
+        res.status(HttpStatus.CREATED).json({ accessToken: tokens.accessToken });
+    }
 }

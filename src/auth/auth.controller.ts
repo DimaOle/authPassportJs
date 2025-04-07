@@ -1,17 +1,28 @@
 import { Cookie, Public, REFRESH_TOKEN, UserAgent } from '@common/common/decarators';
-import { Body, Controller, Get, Post, Res, UnauthorizedException } from '@nestjs/common';
+import {
+    Body,
+    ClassSerializerInterceptor,
+    Controller,
+    Get,
+    Post,
+    Res,
+    UnauthorizedException,
+    UseInterceptors,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
+import { UserResponse } from '@user/resonse';
 
 @Public()
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) {}
-
+    @UseInterceptors(ClassSerializerInterceptor)
     @Post('register')
-    register(@Body() dto: RegisterDto) {
-        return this.authService.register(dto);
+    async register(@Body() dto: RegisterDto) {
+        const user = await this.authService.register(dto);
+        return new UserResponse(user);
     }
 
     @Post('login')
