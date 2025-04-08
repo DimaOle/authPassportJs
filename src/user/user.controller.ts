@@ -1,17 +1,16 @@
 import {
-    Body,
     ClassSerializerInterceptor,
     Controller,
     Delete,
     Get,
     Param,
     ParseUUIDPipe,
-    Post,
     UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResponse } from './resonse';
-import { Public } from '@common/common/decarators';
+import { CurrentUser } from '@common/common/decarators';
+import { JwtPayload } from '@auth/interfaces';
 
 @Controller('user')
 export class UserController {
@@ -26,7 +25,7 @@ export class UserController {
 
     @UseInterceptors(ClassSerializerInterceptor)
     @Delete(':id')
-    deleteUser(@Param('id', ParseUUIDPipe) id: string) {
-        return this.userService.delete(id);
+    deleteUser(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() currentUser: JwtPayload) {
+        return this.userService.delete(id, currentUser);
     }
 }
