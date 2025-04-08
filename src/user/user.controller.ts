@@ -17,14 +17,6 @@ import { Public } from '@common/common/decarators';
 export class UserController {
     constructor(private readonly userService: UserService) {}
 
-    @Public()
-    @UseInterceptors(ClassSerializerInterceptor)
-    @Post()
-    async createUser(@Body() dto) {
-        const user = await this.userService.save(dto);
-        return new UserResponse(user);
-    }
-
     @UseInterceptors(ClassSerializerInterceptor)
     @Get(':idOrEmail')
     async findOneUser(@Param('idOrEmail') idOrEmail: string) {
