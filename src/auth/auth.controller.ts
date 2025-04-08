@@ -1,4 +1,4 @@
-import { Cookie, Public, REFRESH_TOKEN, UserAgent } from '@common/common/decarators';
+import { Cookie, CurrentUser, Public, REFRESH_TOKEN, Roles, UserAgent } from '@common/common/decarators';
 import {
     Body,
     ClassSerializerInterceptor,
@@ -8,6 +8,7 @@ import {
     Post,
     Res,
     UnauthorizedException,
+    UseGuards,
     UseInterceptors,
 } from '@nestjs/common';
 import { Response } from 'express';
