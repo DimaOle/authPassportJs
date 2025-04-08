@@ -125,4 +125,8 @@ export class AuthService {
 
         res.status(HttpStatus.CREATED).json({ accessToken: tokens.accessToken });
     }
+
+    deleteRefreshToken(tokens: string) {
+        return this.prismaServise.token.delete({ where: { token: tokens } });
+    }
 }

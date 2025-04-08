@@ -4,6 +4,7 @@ import {
     ClassSerializerInterceptor,
     Controller,
     Get,
+    HttpStatus,
     Post,
     Res,
     UnauthorizedException,
@@ -43,5 +44,17 @@ export class AuthController {
             throw new UnauthorizedException();
         }
         this.authService.setRefreshTokenToCookies(tokens, res);
+    }
+
+    @Get('logout')
+    async logout(@Cookie(REFRESH_TOKEN) refreshToken: string, @Res() res: Response) {
+        console.log(refreshToken);
+        if (!refreshToken) {
+            res.sendStatus(HttpStatus.OK);
+        } else {
+            await this.authService.deleteRefreshToken(refreshToken);
+            res.cookie(REFRESH_TOKEN, '', { httpOnly: true, secure: true, expires: new Date() });
+            res.sendStatus(HttpStatus.OK);
+        }
     }
 }
