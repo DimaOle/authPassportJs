@@ -52,16 +52,15 @@ export class AuthService {
         if (new Date(token.exp) < new Date()) {
             throw new UnauthorizedException();
         }
-        const users = await this.userService.findOne(token.userId);
+        const users = await this.userService.findOne(token.userId, true);
 
         return this.generateTokens(users, agent);
     }
     async login(dto: LoginDto, agent: string): Promise<Tokens> {
-        const user = await this.userService.findOne(dto.email).catch((err) => {
+        const user = await this.userService.findOne(dto.email, true).catch((err) => {
             this.logger.error(err);
             return null;
         });
-
         if (!user || !compareSync(dto.password, user.password)) {
             throw new UnauthorizedException('Incorrectly password or email');
         }
