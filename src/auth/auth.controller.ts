@@ -6,15 +6,17 @@ import {
     Get,
     HttpStatus,
     Post,
+    Req,
     Res,
     UnauthorizedException,
     UseGuards,
     UseInterceptors,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 import { UserResponse } from '@user/resonse';
+import { GoogleGuard } from './guards/google.guard';
 
 @Public()
 @Controller('auth')
@@ -57,5 +59,15 @@ export class AuthController {
             res.cookie(REFRESH_TOKEN, '', { httpOnly: true, secure: true, expires: new Date() });
             res.sendStatus(HttpStatus.OK);
         }
+    }
+
+    @UseGuards(GoogleGuard)
+    @Get('google')
+    googleAuth() {}
+
+    @UseGuards(GoogleGuard)
+    @Get('google/callback')
+    googleAuthCallback(@Req() req: Request) {
+        return req.user;
     }
 }
