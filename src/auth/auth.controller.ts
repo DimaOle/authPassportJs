@@ -6,6 +6,7 @@ import {
     Get,
     HttpStatus,
     Post,
+    Query,
     Req,
     Res,
     UnauthorizedException,
@@ -17,11 +18,14 @@ import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 import { UserResponse } from '@user/resonse';
 import { GoogleGuard } from './guards/google.guard';
+import { HttpService } from '@nestjs/axios';
+import { map, mergeMap, tap } from 'rxjs';
+import { handleTimeoutAndErrors } from '@common/common/helpers';
 
 @Public()
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+    constructor(private readonly authService: AuthService, private readonly httpService: HttpService) {}
     @UseInterceptors(ClassSerializerInterceptor)
     @Post('register')
     async register(@Body() dto: RegisterDto) {
@@ -67,7 +71,17 @@ export class AuthController {
 
     @UseGuards(GoogleGuard)
     @Get('google/callback')
-    googleAuthCallback(@Req() req: Request) {
-        return req.user;
+    googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+        const token = req.user['accessToken'];
+        return res.redirect(`http://localhost:3000/api/auth/success?token=${token}`);
+    }
+
+    @Get('success')
+    success(@Query('token') token: string, @UserAgent() agent: string, @Res() res: Response) {
+        return this.httpService.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`).pipe(
+            mergeMap(({ data: { email } }) => this.authService.googleAuth(email, agent)),
+            map((data) => this.authService.setRefreshTokenToCookies(data, res)),
+            handleTimeoutAndErrors(),
+        );
     }
 }

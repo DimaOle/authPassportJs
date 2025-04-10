@@ -1,5 +1,5 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
-import { Role, User } from '@prisma/client';
+import { Providers, Role, User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from '@auth/interfaces';
@@ -17,12 +17,13 @@ export class UserService {
     ) {}
 
     async save(user: Partial<User>) {
-        const hashedPassword = this.hashPassword(user.password);
+        const hashedPassword = user?.password ? this.hashPassword(user.password) : null;
         return await this.prismaService.user.create({
             data: {
                 email: user.email,
                 password: hashedPassword,
                 roles: ['USER'],
+                provider: user.provider ? user.provider : null,
             },
         });
     }
