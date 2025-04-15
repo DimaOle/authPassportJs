@@ -1,5 +1,5 @@
-import { IsPasswordMatchingConstraint } from "@common/common/decarators";
-import { IsEmail, IsString, MinLength, Validate } from "class-validator";
+import { IsPasswordMatchingConstraint } from '@common/common/decarators';
+import { IsEmail, IsString, MinLength, Validate } from 'class-validator';
 
 export class RegisterDto {
     @IsEmail()

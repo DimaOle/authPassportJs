@@ -1,4 +1,12 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import {
+    BadRequestException,
+    ForbiddenException,
+    HttpException,
+    HttpStatus,
+    Inject,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { Providers, Role, User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -7,6 +15,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { convertToSecondsUtil } from '@common/common/utils';
+import { UpdateUserDto } from './dto';
 
 @Injectable()
 export class UserService {
@@ -49,6 +58,21 @@ export class UserService {
         }
 
         return user;
+    }
+
+    async update(dto: UpdateUserDto) {
+        const user = await this.prismaService.user.findFirst({ where: { id: dto.id } });
+        if (!user) {
+            throw new NotFoundException('User with id 1 not found');
+        }
+
+        if (dto.id !== user.id && user.roles.includes('ADMIN')) {
+            throw new ForbiddenException('You do not have access to this resource');
+        }
+
+        if (dto.password && dto.password !== dto.repeatPassword) {
+            throw new BadRequestException('Passwords do not match');
+        }
     }
 
     async delete(id: string, currentUser: JwtPayload) {

@@ -1,10 +1,12 @@
 import {
+    Body,
     ClassSerializerInterceptor,
     Controller,
     Delete,
     Get,
     Param,
     ParseUUIDPipe,
+    Post,
     UseGuards,
     UseInterceptors,
 } from '@nestjs/common';
@@ -14,6 +16,7 @@ import { CurrentUser, Public, Roles } from '@common/common/decarators';
 import { JwtPayload } from '@auth/interfaces';
 import { RolesGuard } from '@auth/guards/role.guard';
 import { Role } from '@prisma/client';
+import { UpdateUserDto } from './dto';
 
 @Controller('user')
 export class UserController {
@@ -36,7 +39,11 @@ export class UserController {
     @Roles(Role.ADMIN)
     @Get('profile/me')
     me(@CurrentUser() CurrentUser: JwtPayload) {
-        console.log(CurrentUser);
         return CurrentUser;
+    }
+
+    @Post('profile/update')
+    updateUser(@Body() dto: UpdateUserDto) {
+        return this.userService.update(dto);
     }
 }

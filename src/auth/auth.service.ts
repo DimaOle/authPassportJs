@@ -57,6 +57,7 @@ export class AuthService {
         return this.generateTokens(users, agent);
     }
     async login(dto: LoginDto, agent: string): Promise<Tokens> {
+        console.log(dto);
         const user = await this.userService.findOne(dto.email, true).catch((err) => {
             this.logger.error(err);
             return null;
