@@ -43,5 +43,4 @@ enum Role {
 
 enum Providers {
   GOOGLE
-  YANDEX
 }
