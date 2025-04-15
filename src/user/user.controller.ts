@@ -17,6 +17,7 @@ import { JwtPayload } from '@auth/interfaces';
 import { RolesGuard } from '@auth/guards/role.guard';
 import { Role } from '@prisma/client';
 import { UpdateUserDto } from './dto';
+import { UpdateUserGuard } from './guards';
 
 @Controller('user')
 export class UserController {
@@ -42,6 +43,7 @@ export class UserController {
         return CurrentUser;
     }
 
+    @UseGuards(UpdateUserGuard)
     @Post('profile/update')
     updateUser(@Body() dto: UpdateUserDto) {
         return this.userService.update(dto);
